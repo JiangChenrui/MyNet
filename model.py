@@ -1,5 +1,5 @@
 import torch.nn as nn
-import math
+import torchvision.models as models
 
 
 class VGG(nn.Module):
@@ -97,16 +97,17 @@ class MobileNet(nn.Module):
         def conv_bn(inp, oup, stride):
             return nn.Sequential(
                 nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
-                nn.BatchNorm2d(oup), nn.ReLU6(inplace=True))
+                nn.BatchNorm2d(oup), nn.ReLU(inplace=True))
 
         def conv_dw(inp, oup, stride):
             return nn.Sequential(
                 nn.Conv2d(inp, inp, 3, stride, 1, groups=inp, bias=False),
                 nn.BatchNorm2d(inp),
-                nn.ReLU6(inplace=True),
+                nn.ReLU(inplace=True),
+
                 nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
                 nn.BatchNorm2d(oup),
-                nn.ReLU6(inplace=True),
+                nn.ReLU(inplace=True),
             )
 
         self.model = nn.Sequential(
@@ -135,20 +136,6 @@ class MobileNet(nn.Module):
         x = self.fc(x)
         return x
 
-    def _initialize_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(
-                    m.weight, mode='fan_out', nonlinearity='relu')
-                if m.bias is not None:
-                    nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, 0, 0.01)
-                nn.init.constant_(m.bias, 0)
-
 
 def weight_init(model):
     for m in model.modules():
@@ -167,5 +154,4 @@ class MobileNetS1(nn.Module):
         super(MobileNetS1, self).__init__()
 
 
-print(vgg16())
-print(weight_init(vgg16()))
+print(MobileNet(num_classes=4))

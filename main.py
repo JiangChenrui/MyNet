@@ -17,7 +17,7 @@ from load_data import MyDataset
 from model import MobileNet, vgg16, vgg16_bn
 from utils.utils import show_confMat, validate
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'  # 使用哪几个GPU进行训练
+os.environ["CUDA_VISIBLE_DEVICES"] = '2'  # 使用哪几个GPU进行训练
 
 
 sys.path.append("..")
@@ -31,8 +31,9 @@ max_epoch = 60
 MobileNet = MobileNet(num_classes=4)
 vgg16_bn = vgg16_bn(num_classes=4)
 vgg16 = vgg16(num_classes=4)
-SqueezeNet = models.SqueezeNet(num_classes=4)
-net = SqueezeNet
+SqueezeNet = models.SqueezeNet(version=1.1, num_classes=4)
+net = MobileNet
+print(net)
 
 # 权重初始化
 # net._initialize_weights()
@@ -68,8 +69,8 @@ trainTrainsform = transforms.Compose([
     transforms.ToTensor(), normTransform
 ])
 
-valiTransform = trainTrainsform
 # valiTransform = transforms.Compose([transforms.ToTensor(), normTransform])
+valiTransform = trainTrainsform
 
 # 构建MyDataset实例
 train_data = MyDataset(txt_path=train_dir, transform=trainTrainsform)
@@ -81,7 +82,7 @@ train_loader = DataLoader(
 valid_loader = DataLoader(dataset=valid_data, batch_size=batch_size)
 
 # 定义损失函数和优化器
-criterion = nn.CrossEntropyLoss()  # 选择损失函数
+criterion = nn.CrossEntropyLoss().cuda()  # 选择损失函数
 optimizer = optim.SGD(
     net.parameters(), lr=lr_init, momentum=0.9, dampening=0.1)  # 选择优化器
 scheduler = torch.optim.lr_scheduler.StepLR(
@@ -93,7 +94,7 @@ for epoch in range(max_epoch):
     loss_sigma = 0.0  # 记录每个epoch的loss之和
     correct = 0.0
     total = 0.0
-    # scheduler.step()  # 更新学习率
+    scheduler.step()  # 更新学习率
 
     for i, data in enumerate(train_loader):
         # 获取图片和标签
@@ -133,7 +134,7 @@ for epoch in range(max_epoch):
             # 记录训练loss
             writer.add_scalars('Loss_group', {'train_loss': loss_avg}, epoch)
             # 记录learning rate
-            # writer.add_scalar('learning rate', scheduler.get_lr()[0], epoch)
+            writer.add_scalar('learning rate', scheduler.get_lr()[0], epoch)
             # 记录Accuracy
             writer.add_scalars('Accuracy_group', {'train_acc': correct / total},
                                epoch)
