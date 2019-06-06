@@ -1,5 +1,5 @@
 /Result/
-.idea
-.ipynb_checkpoints
-__pycache__
-.jpg
+*.idea
+/.ipynb_checkpoints/
+*__pycache__
+*.jpg

@@ -14,28 +14,33 @@ from torchvision import transforms
 
 # from compute_mean import compute_mean_std
 from load_data import MyDataset
-from model import MobileNet, vgg16, vgg16_bn
+from model import MobileNet, vgg16, vgg16_bn, weight_init, MobileNetV2
 from utils.utils import show_confMat, validate
+from MobileNetV3 import MobileNetV3
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '2'  # 使用哪几个GPU进行训练
+os.environ["CUDA_VISIBLE_DEVICES"] = '3'  # 使用哪几个GPU进行训练
 
 
 sys.path.append("..")
 cuda_gpu = torch.cuda.is_available()
 
-batch_size = 128
-lr_init = 1e-3
+batch_size = 64
+lr_init = 1e-4
 max_epoch = 60
 
 # model
 MobileNet = MobileNet(num_classes=4)
 vgg16_bn = vgg16_bn(num_classes=4)
 vgg16 = vgg16(num_classes=4)
-SqueezeNet = models.SqueezeNet(version=1.1, num_classes=4)
-net = MobileNet
+# SqueezeNet = models.SqueezeNet(version=1.1, num_classes=4)
+iception = models.inception_v3(num_classes=4)
+MobileNetV2 = MobileNetV2(num_classes=4)
+MobileNetV3 = MobileNetV3(num_classes=4)
+net = MobileNetV2
 print(net)
 
 # 权重初始化
+# weight_init(net)
 # net._initialize_weights()
 if (cuda_gpu):
     net = torch.nn.DataParallel(net).cuda()  # 将模型转为cuda类型
@@ -49,7 +54,7 @@ result_dir = 'Result/'
 now_time = datetime.now()
 time_str = datetime.strftime(now_time, '%m-%d_%H-%M-%S')
 
-log_dir = os.path.join(result_dir, 'SqueezeNet', time_str)
+log_dir = os.path.join(result_dir, 'MobileNetV2', time_str)
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 

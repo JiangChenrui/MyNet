@@ -80,4 +80,3 @@ if __name__ == '__main__':
     speed(vgg16, 'vgg16')
     speed(squeezenet, 'squeezenet')
     speed(mobilenet, 'mobilenet')
-    

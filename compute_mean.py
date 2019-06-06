@@ -48,5 +48,6 @@ def compute_mean_std(data_dir, h=224, w=224, CNum=2000):
     stdevs.reverse()
     return means, stdevs
 
+
 normMean, normStd = compute_mean_std("data/train_old", 224, 224, 5)
 print(normMean, normStd)

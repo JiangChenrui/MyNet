@@ -93,7 +93,7 @@ def validate(net, data_loader, set_name, classes_name):
         labels = Variable(labels)
 
         outputs = net(images)
-        outputs.detach_()
+        outputs.detach()
 
         _, predicted = torch.max(outputs.data, 1)
 
