@@ -148,7 +148,7 @@ def print_model_parm_flops(model):
     # print 'list_final:{}'.format(list_final)
 
 
-def print_forward(model):  
+def print_forward(model):
     select_layer = model.layer1[0].conv1
 
     grads = {}
@@ -531,10 +531,14 @@ def print_autograd_graph():
 
 
 if __name__ == '__main__':
-    from model import MobileNet, vgg16_bn, inception
+    from model import MobileNet, vgg16_bn, inception, MobileNetV2
+    from MobileNetV3 import MobileNetV3
     MobileNet = MobileNet(num_classes=4)
     vgg16_bn = vgg16_bn(num_classes=4)
     squeezenet = models.squeezenet1_1(pretrained=True)
+    resnet = models.resnet50(num_classes=4)
+    MobileNetV2 = MobileNetV2(num_classes=4)
+    MobileNetV3 = MobileNetV3(num_classes=4)
     # 模型参数总量
     # print_model_parm_nums(MobileNet)
     # print_model_parm_nums(vgg16_bn)
@@ -542,6 +546,16 @@ if __name__ == '__main__':
     # show_summary(MobileNet)
     # show_summary(vgg16_bn)
     # 计算量
-    # print_model_parm_flops(MobileNet)
-    # print_model_parm_flops(vgg16_bn)
+    print_model_parm_flops(MobileNet)
+    print_model_parm_flops(vgg16_bn)
+    # print_model_parm_flops(inception)
+    print_model_parm_flops(resnet)
+    print_model_parm_flops(MobileNetV2)
+    print_model_parm_flops(MobileNetV3)
+
+    print_model_parm_nums(MobileNet)
+    print_model_parm_nums(vgg16_bn)
     print_model_parm_nums(inception)
+    print_model_parm_nums(resnet)
+    print_model_parm_nums(MobileNetV2)
+    print_model_parm_nums(MobileNetV3)

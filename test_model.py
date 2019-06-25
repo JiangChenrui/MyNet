@@ -1,9 +1,11 @@
 import time
 import torch
 import torch.nn as nn
-import torch.backends.cudnn as cudnn
+# import torch.backends.cudnn as cudnn
 import torchvision.models as models
 from torch.autograd import Variable
+import model as md
+import MobileNetV3
 
 
 class MobileNet(nn.Module):
@@ -54,7 +56,7 @@ class MobileNet(nn.Module):
 
 def speed(model, name):
     t0 = time.time()
-    input = torch.rand(1, 3, 224, 224).cuda()
+    input = torch.rand(64, 3, 224, 224).cuda()
     input = Variable(input)
     t1 = time.time()
 
@@ -64,7 +66,7 @@ def speed(model, name):
     model(input)
     t3 = time.time()
 
-    print('%10s : %f, %10s : %f' % (name, t1 - t0, name, t3 - t2))
+    print('%12s : %f, %12s : %f' % (name, t1 - t0, name, t3 - t2))
 
 
 if __name__ == '__main__':
@@ -73,10 +75,16 @@ if __name__ == '__main__':
     alexnet = models.alexnet().cuda()
     vgg16 = models.vgg16().cuda()
     squeezenet = models.squeezenet1_0().cuda()
-    mobilenet = MobileNet().cuda()
+    mobilenet = md.MobileNet().cuda()
+    mobilenet_1 = md.MobileNet_1().cuda()
+    mobilenetV2 = md.MobileNetV2().cuda()
+    mobilenetV3 = MobileNetV3.MobileNetV3().cuda()
 
     speed(resnet18, 'resnet18')
     speed(alexnet, 'alexnet')
     speed(vgg16, 'vgg16')
     speed(squeezenet, 'squeezenet')
     speed(mobilenet, 'mobilenet')
+    speed(mobilenet_1, 'mobilenet_1')
+    speed(mobilenetV2, 'mobilenetV2')
+    speed(mobilenetV3, 'mobilenetV3')

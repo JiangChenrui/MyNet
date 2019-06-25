@@ -14,11 +14,11 @@ from torchvision import transforms
 
 # from compute_mean import compute_mean_std
 from load_data import MyDataset
-from model import MobileNet, vgg16, vgg16_bn, weight_init, MobileNetV2
+from model import MobileNet, vgg16, vgg16_bn, weight_init, MobileNetV2, MobileNet1_0
 from utils.utils import show_confMat, validate
 from MobileNetV3 import MobileNetV3
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'  # 使用哪几个GPU进行训练
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'  # 使用哪几个GPU进行训练
 
 
 sys.path.append("..")
@@ -36,11 +36,13 @@ vgg16 = vgg16(num_classes=4)
 iception = models.inception_v3(num_classes=4)
 MobileNetV2 = MobileNetV2(num_classes=4)
 MobileNetV3 = MobileNetV3(num_classes=4)
-net = MobileNetV2
+resnet50 = models.resnet50(num_classes=4)
+MobileNet1_0 = MobileNet1_0(num_classes=4)
+net = MobileNet1_0
 print(net)
 
 # 权重初始化
-# weight_init(net)
+weight_init(net)
 # net._initialize_weights()
 if (cuda_gpu):
     net = torch.nn.DataParallel(net).cuda()  # 将模型转为cuda类型
@@ -54,7 +56,7 @@ result_dir = 'Result/'
 now_time = datetime.now()
 time_str = datetime.strftime(now_time, '%m-%d_%H-%M-%S')
 
-log_dir = os.path.join(result_dir, 'MobileNetV2', time_str)
+log_dir = os.path.join(result_dir, 'MobileNet1_1', time_str)
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 

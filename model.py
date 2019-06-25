@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torchvision.models as models
+import model_summary as ms
 
 SqueeNet = models.SqueezeNet(version=1.1, num_classes=4)
 inception = models.inception_v3(num_classes=4)
@@ -92,25 +93,27 @@ def vgg16_bn(**kwargs):
     return VGG(make_layers(cfg['D'], batch_norm=True), **kwargs)
 
 
+def conv_bn(inp, oup, stride):
+    return nn.Sequential(
+        nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
+        nn.BatchNorm2d(oup), nn.ReLU6(inplace=True))
+
+
+def conv_dw(inp, oup, stride):
+    return nn.Sequential(
+        nn.Conv2d(inp, inp, 3, stride, 1, groups=inp, bias=False),
+        nn.BatchNorm2d(inp),
+        nn.ReLU6(inplace=True),
+        nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
+        nn.BatchNorm2d(oup),
+        nn.ReLU6(inplace=True),
+    )
+
+
 class MobileNet(nn.Module):
 
     def __init__(self, num_classes=1000):
         super(MobileNet, self).__init__()
-
-        def conv_bn(inp, oup, stride):
-            return nn.Sequential(
-                nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
-                nn.BatchNorm2d(oup), nn.ReLU(inplace=True))
-
-        def conv_dw(inp, oup, stride):
-            return nn.Sequential(
-                nn.Conv2d(inp, inp, 3, stride, 1, groups=inp, bias=False),
-                nn.BatchNorm2d(inp),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(oup),
-                nn.ReLU(inplace=True),
-            )
 
         self.model = nn.Sequential(
             conv_bn(3, 32, 2),
@@ -138,6 +141,49 @@ class MobileNet(nn.Module):
         return x
 
 
+class MobileNet1_0(nn.Module):
+
+    def __init__(self, num_classes=1000):
+        super(MobileNet1_0, self).__init__()
+
+        # MobileNet0
+        # self.model = nn.Sequential(
+        #     conv_bn(3, 32, 2),
+        #     conv_dw(32, 64, 1),
+        #     conv_dw(64, 128, 2),
+        #     conv_dw(128, 128, 1),
+        #     conv_dw(128, 256, 2),
+        #     conv_dw(256, 256, 1),
+        #     conv_dw(256, 512, 2),
+        #     # conv_dw(512, 512, 1),
+        #     # conv_dw(512, 512, 1),
+        #     # conv_dw(512, 512, 1),
+        #     # conv_dw(512, 512, 1),
+        #     # conv_dw(512, 512, 1),
+        #     conv_dw(512, 1024, 2),
+        #     conv_dw(1024, 1024, 1),
+        #     nn.AvgPool2d(7),
+        # )
+
+        # MobileNetV1.0
+        self.model = nn.Sequential(
+            conv_bn(3, 32, 2),
+            conv_dw(32, 64, 2),
+            conv_dw(64, 128, 2),
+            conv_dw(128, 256, 2),
+            conv_dw(256, 512, 1),
+            conv_dw(512, 1024, 2),
+            nn.AvgPool2d(7),
+        )
+        self.fc = nn.Linear(1024, num_classes)
+
+    def forward(self, x):
+        x = self.model(x)
+        x = x.view(-1, 1024)
+        x = self.fc(x)
+        return x
+
+
 def weight_init(model):
     """
     输入：pytorch网络模型
@@ -145,30 +191,24 @@ def weight_init(model):
     """
     for m in model.modules():
         if isinstance(m, nn.Conv2d):
-            # print("init Conv2d")
-            nn.init.normal_(m.weight.data)
-            nn.init.xavier_normal_(m.weight.data)
-            nn.init.kaiming_normal_(m.weight.data)
-            if m.bias is not None:
-                nn.init.constant_(m.bias, 0)
-        elif isinstance(m, nn.Linear):
-            # print("init linear")
-            m.weight.data.normal_(0, 0.01)
-            if m.bias is not None:
-                nn.init.constant_(m.bias, 0)
-        elif isinstance(m, nn.BatchNorm2d):
-            # print("init BatchNorm2d")
-            m.weight.data.normal_(0, 0.01)
-            if m.bias is not None:
-                nn.init.constant_(m.bias, 0)
+            if isinstance(m, nn.Conv2d):
+                nn.init.xavier_uniform_(m.weight)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                m.weight.data.normal_(0, 0.01)
+                m.bias.data.zero_()
     print("Weight has init")
 
 
 # MobileNetV2
-def conv_bn(inp, oup, stride):
-    return nn.Sequential(
-        nn.Conv2d(inp, oup, 3, stride, 1, bias=False), nn.BatchNorm2d(oup),
-        nn.ReLU6(inplace=True))
+# def conv_bn(inp, oup, stride):
+#     return nn.Sequential(
+#         nn.Conv2d(inp, oup, 3, stride, 1, bias=False), nn.BatchNorm2d(oup),
+#         nn.ReLU6(inplace=True))
 
 
 def conv_1x1_bn(inp, oup):
@@ -286,4 +326,4 @@ class MobileNetV2(nn.Module):
         return x
 
 
-# weight_init(MobileNet(num_classes=4))
+# weight_init(vgg16_bn(num_classes=4))
