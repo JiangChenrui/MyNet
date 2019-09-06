@@ -10,7 +10,7 @@ from torch.autograd import Variable
 def test(model):
     print(model.layer1[0].conv1.weight.data)
 
-    print(model.layer1[0].conv1.__class__)  
+    print(model.layer1[0].conv1.__class__)
     # <class 'torch.nn.modules.conv.Conv2d'>
     print(model.layer1[0].conv1.kernel_size)
 
@@ -192,6 +192,7 @@ def print_value():
 
 
 def print_layers_num(model):
+
     def foo(net):
         childrens = list(net.children())
         if not childrens:
@@ -240,8 +241,8 @@ def check_summary(model):
         return tmpstr
 
     # Test
-    import torchvision.models as models
-    model = models.alexnet()
+    # import torchvision.models as models
+    # model = models.alexnet()
     print(torch_summarize(model))
 
 
@@ -342,7 +343,7 @@ def show_summary(model):
 
             if not isinstance(module, nn.Sequential) and \
                 not isinstance(module, nn.ModuleList) and \
-                not (module == model):
+                 not (module == model):
                 hooks.append(module.register_forward_hook(hook))
 
         # Names are stored in parent and path+name is unique not the name
@@ -378,7 +379,7 @@ def show_summary(model):
 
     # Test on alexnet
     df = torch_summarize_df(input_size=(3, 224, 224), model=model)
-    print(df)
+    return df
 
     # # Output
     #              name class_name        input_shape       output_shape  nb_params
@@ -425,7 +426,7 @@ def show_save_tensor(model):
         grid = utils.make_grid(
             tensor, nrow=nrow, normalize=True, padding=padding)
         # plt.figure(figsize=(nrow,rows))
-        plt.imshow(grid.numpy().transpose((1, 2, 0)))  #CHW HWC
+        plt.imshow(grid.numpy().transpose((1, 2, 0)))  # CHW HWC
 
     def save_tensor(tensor,
                     filename,
@@ -472,7 +473,7 @@ def print_autograd_graph():
                 require grad (TODO: make optional)
         """
         if params is not None:
-            #assert all(isinstance(p, Variable) for p in params.values())
+            # assert all(isinstance(p, Variable) for p in params.values())
             param_map = {id(v): k for k, v in params.items()}
 
         node_attr = dict(
@@ -530,15 +531,48 @@ def print_autograd_graph():
     # g
 
 
+def modelsize(model, input, type_size=4):
+    para = sum([np.prod(list(p.size())) for p in model.parameters()])
+    print('Model {} : params: {:4f}M'.format(model._get_name(),
+                                             para * type_size / 1000 / 1000))
+
+    input_ = input.clone()
+    input_.requires_grad_(requires_grad=False)
+
+    mods = list(model.modules())
+    out_sizes = []
+
+    for i in range(1, len(mods)):
+        m = mods[i]
+        if isinstance(m, nn.ReLU):
+            if m.inplace:
+                continue
+        out = m(input_)
+        out_sizes.append(np.array(out.size()))
+        input_ = out
+
+    total_nums = 0
+    for i in range(len(out_sizes)):
+        s = out_sizes[i]
+        nums = np.prod(np.array(s))
+        total_nums += nums
+
+    print('Model {} : intermedite variables: {:3f} M (without backward)'.format(
+        model._get_name(), total_nums * type_size / 1000 / 1000))
+    print('Model {} : intermedite variables: {:3f} M (with backward)'.format(
+        model._get_name(), total_nums * type_size * 2 / 1000 / 1000))
+
+
 if __name__ == '__main__':
-    from model import MobileNet, vgg16_bn, inception, MobileNetV2
+    from model import MobileNet, vgg16_bn, inception, MobileNetV2, MobileNet1_0
     from MobileNetV3 import MobileNetV3
     MobileNet = MobileNet(num_classes=4)
     vgg16_bn = vgg16_bn(num_classes=4)
-    squeezenet = models.squeezenet1_1(pretrained=True)
+    # squeezenet = models.squeezenet1_1(pretrained=True)
     resnet = models.resnet50(num_classes=4)
     MobileNetV2 = MobileNetV2(num_classes=4)
     MobileNetV3 = MobileNetV3(num_classes=4)
+    MobileNet1_0 = MobileNet1_0(num_classes=4)
     # 模型参数总量
     # print_model_parm_nums(MobileNet)
     # print_model_parm_nums(vgg16_bn)
@@ -546,16 +580,7 @@ if __name__ == '__main__':
     # show_summary(MobileNet)
     # show_summary(vgg16_bn)
     # 计算量
-    print_model_parm_flops(MobileNet)
-    print_model_parm_flops(vgg16_bn)
-    # print_model_parm_flops(inception)
-    print_model_parm_flops(resnet)
-    print_model_parm_flops(MobileNetV2)
-    print_model_parm_flops(MobileNetV3)
 
-    print_model_parm_nums(MobileNet)
-    print_model_parm_nums(vgg16_bn)
-    print_model_parm_nums(inception)
-    print_model_parm_nums(resnet)
-    print_model_parm_nums(MobileNetV2)
-    print_model_parm_nums(MobileNetV3)
+    # input = torch.randn(1, 3, 1080, 1920)
+    output = show_summary(MobileNet1_0)
+    output.to_csv('../models/MobileNet1_0.csv')
