@@ -213,7 +213,8 @@ def weight_init(model):
 
 def conv_1x1_bn(inp, oup):
     return nn.Sequential(
-        nn.Conv2d(inp, oup, 1, 1, 0, bias=False), nn.BatchNorm2d(oup),
+        nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
+        nn.BatchNorm2d(oup),
         nn.ReLU6(inplace=True))
 
 
@@ -326,4 +327,6 @@ class MobileNetV2(nn.Module):
         return x
 
 
-# weight_init(vgg16_bn(num_classes=4))
+if __name__ == "__main__":
+    mobilenet = MobileNet(num_classes=4)
+    print(mobilenet)

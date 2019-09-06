@@ -3,6 +3,9 @@
 import numpy as np
 from scipy.optimize import minimize
 from scipy import stats
+import sys
+
+sys.executable
 
 
 def sigmoid(z):
@@ -57,9 +60,8 @@ def computeCost(Thetas, y, theLambda, X=None, a=None):
     if a is None:
         a = fp(Thetas, X)
     error = -np.sum(
-        np.multiply(y.T, np.log(a[-1])) +
-        np.multiply((1 - y).T, np.log(1 - a[-1])))
-    # 正规化参数
+        np.multiply(y.T, np.log(a[-1])) + np.multiply((1 - y).T, np.log(1 - a[-1])))
+    # 正则化参数
     reg = -np.sum([np.sum(Theta[:, 1:]) for Theta in Thetas])
     return (1.0 / m) * error + (1.0 / (2 * m)) * theLambda * reg
 
@@ -181,7 +183,7 @@ def fp(Thetas, X):
             a[l] = X.T
         else:
             # z = Thetas[l - 1] * a[l - 1]
-            z = np.dot(Thetas[l-1], a[l-1])
+            z = np.dot(Thetas[l - 1], a[l - 1])
             a[l] = sigmoid(z)
         # 除输出层外，需要添加偏置
         if l != layerNum - 1:
@@ -308,7 +310,7 @@ def train(X,
             unitNum=unitNum,
             classNum=classNum,
             epsilon=epsilon)
-    # 先进性梯度校验
+    # 先进行梯度校验
     print('Doing Gradient Checking....')
     checked = gradientCheck(Thetas, X, y, theLambda)
     if checked:
