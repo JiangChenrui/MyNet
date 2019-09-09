@@ -32,9 +32,6 @@ class User(object):
         return super().__getattribute__(name)
 
 
-
-
-
 if __name__ == '__main__':
     # user = User()
     # user.attr1 = True
