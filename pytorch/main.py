@@ -14,7 +14,7 @@ from torchvision import transforms
 
 # from compute_mean import compute_mean_std
 from load_data import MyDataset
-from model import MobileNet, vgg16, vgg16_bn, weight_init, MobileNetV2, MobileNet1_0
+from models.model import MobileNet, vgg16, vgg16_bn, weight_init, MobileNetV2, MobileNet1_0
 from utils.utils import show_confMat, validate
 from MobileNetV3 import MobileNetV3
 

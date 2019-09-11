@@ -1,6 +1,5 @@
 import torch.nn as nn
 import torchvision.models as models
-import model_summary as ms
 
 SqueeNet = models.SqueezeNet(version=1.1, num_classes=4)
 inception = models.inception_v3(num_classes=4)

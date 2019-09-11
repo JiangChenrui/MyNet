@@ -258,3 +258,8 @@ class MobileNetV3(nn.Module):
 
         out = out.view(batch, -1)
         return out
+
+
+if __name__ == "__main__":
+    model = MobileNetV3(num_classes=4)
+    
