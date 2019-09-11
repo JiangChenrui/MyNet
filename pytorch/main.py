@@ -14,7 +14,7 @@ from torchvision import transforms
 
 # from compute_mean import compute_mean_std
 from load_data import MyDataset
-from model import MobileNet, vgg16, vgg16_bn, weight_init, MobileNetV2, MobileNet1_0
+from models.model import MobileNet, vgg16, vgg16_bn, weight_init, MobileNetV2, MobileNet1_0
 from utils.utils import show_confMat, validate
 from MobileNetV3 import MobileNetV3
 
@@ -77,7 +77,10 @@ trainTrainsform = transforms.Compose([
 ])
 
 # valiTransform = transforms.Compose([transforms.ToTensor(), normTransform])
-valiTransform = trainTrainsform
+valiTransform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(), normTransform
+])
 
 # 构建MyDataset实例
 train_data = MyDataset(txt_path=train_dir, transform=trainTrainsform)
@@ -96,6 +99,8 @@ scheduler = torch.optim.lr_scheduler.StepLR(
     optimizer, step_size=50, gamma=0.1)  # 设置学习率下降策略
 
 # 训练
+best_model = 0
+
 for epoch in range(max_epoch):
 
     loss_sigma = 0.0  # 记录每个epoch的loss之和
@@ -153,7 +158,7 @@ for epoch in range(max_epoch):
         writer.add_histogram(name + '_data', layer.cpu().data.numpy(), epoch)
 
     # 验证集验证
-    if epoch % 2 == 0:
+    if epoch % 2 == 1:
         loss_sigma = 0.0
         cls_num = len(classes_name)
         conf_mat = np.zeros([cls_num, cls_num])  # 混淆矩阵
@@ -183,6 +188,7 @@ for epoch in range(max_epoch):
                 cate_i = lables[j].cpu().numpy()
                 pre_i = predicted[j].cpu().numpy()
                 conf_mat[cate_i, pre_i] += 1.0
+            Accuracy = conf_mat.trace() / conf_mat.sum()
 
         print('{} set Accuracy:{:.2%}'.format('Valid',
                                               conf_mat.trace() /
@@ -195,10 +201,11 @@ for epoch in range(max_epoch):
                            {'valid_acc': conf_mat.trace() / conf_mat.sum()},
                            epoch)
 
-    # 每10个epoch保存一次模型
-    if epoch % 9 == 0:
-        net_save_path = os.path.join(log_dir, str(epoch) + 'net_params.pkl')
-        torch.save(net.state_dict(), net_save_path)
+        if Accuracy >= best_model:
+            net_save_path = os.path.join(log_dir, 'best_model_params.pth')
+            torch.save(net.state_dict(), net_save_path)
+
+
 print('Finished Training')
 
 # 绘制混淆矩阵图

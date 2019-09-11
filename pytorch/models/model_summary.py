@@ -3,8 +3,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torchvision
-import torchvision.models as models
+import torchvision.models
 from torch.autograd import Variable
+from graphviz import Digraph
 
 
 def test(model):
@@ -563,16 +564,78 @@ def modelsize(model, input, type_size=4):
         model._get_name(), total_nums * type_size * 2 / 1000 / 1000))
 
 
+def make_dot(var, params=None):
+    """
+    画出 PyTorch 自动梯度图 autograd graph 的 Graphviz 表示.
+    蓝色节点表示有梯度计算的变量Variables;
+    橙色节点表示用于 torch.autograd.Function 中的 backward 的张量 Tensors.
+
+    Args:
+        var: output Variable
+        params: dict of (name, Variable) to add names to node that
+            require grad (TODO: make optional)
+    """
+    if params is not None:
+        assert all(isinstance(p, Variable) for p in params.values())
+        param_map = {id(v): k for k, v in params.items()}
+
+    node_attr = dict(style='filled', shape='box', align='left',
+                     fontsize='12', ranksep='0.1', height='0.2')
+    dot = Digraph(node_attr=node_attr, graph_attr=dict(size="12,12"))
+    seen = set()
+
+    def size_to_str(size):
+        return '(' + (', ').join(['%d' % v for v in size]) + ')'
+
+    output_nodes = (var.grad_fn,) if not isinstance(var, tuple) else tuple(v.grad_fn for v in var)
+
+    def add_nodes(var):
+        if var not in seen:
+            if torch.is_tensor(var):
+                # note: this used to show .saved_tensors in pytorch0.2, but stopped
+                # working as it was moved to ATen and Variable-Tensor merged
+                dot.node(str(id(var)), size_to_str(var.size()), fillcolor='orange')
+            elif hasattr(var, 'variable'):
+                u = var.variable
+                name = param_map[id(u)] if params is not None else ''
+                node_name = '%s\n %s' % (name, size_to_str(u.size()))
+                dot.node(str(id(var)), node_name, fillcolor='lightblue')
+            elif var in output_nodes:
+                dot.node(str(id(var)), str(type(var).__name__), fillcolor='darkolivegreen1')
+            else:
+                dot.node(str(id(var)), str(type(var).__name__))
+            seen.add(var)
+            if hasattr(var, 'next_functions'):
+                for u in var.next_functions:
+                    if u[0] is not None:
+                        dot.edge(str(id(u[0])), str(id(var)))
+                        add_nodes(u[0])
+            if hasattr(var, 'saved_tensors'):
+                for t in var.saved_tensors:
+                    dot.edge(str(id(t)), str(id(var)))
+                    add_nodes(t)
+
+    # 多输出场景 multiple outputs
+    if isinstance(var, tuple):
+        for v in var:
+            add_nodes(v.grad_fn)
+    else:
+        add_nodes(var.grad_fn)
+    return dot
+
+
 if __name__ == '__main__':
-    from model import MobileNet, vgg16_bn, inception, MobileNetV2, MobileNet1_0
+    import model as M
     from MobileNetV3 import MobileNetV3
-    MobileNet = MobileNet(num_classes=4)
-    vgg16_bn = vgg16_bn(num_classes=4)
+    from ShuffleNet_V2 import ShuffleNetV2
+    MobileNet = M.MobileNet(num_classes=4)
+    vgg16_bn = M.vgg16_bn(num_classes=4)
     # squeezenet = models.squeezenet1_1(pretrained=True)
-    resnet = models.resnet50(num_classes=4)
-    MobileNetV2 = MobileNetV2(num_classes=4)
+    resnet = torchvision.models.resnet50(num_classes=4)
+    MobileNetV2 = M.MobileNetV2(num_classes=4)
     MobileNetV3 = MobileNetV3(num_classes=4)
-    MobileNet1_0 = MobileNet1_0(num_classes=4)
+    MobileNet1_0 = M.MobileNet1_0(num_classes=4)
+    ShuffleNetV2 = ShuffleNetV2(num_classes=4)
     # 模型参数总量
     # print_model_parm_nums(MobileNet)
     # print_model_parm_nums(vgg16_bn)
@@ -581,6 +644,8 @@ if __name__ == '__main__':
     # show_summary(vgg16_bn)
     # 计算量
 
-    # input = torch.randn(1, 3, 1080, 1920)
-    output = show_summary(MobileNet1_0)
-    output.to_csv('../models/MobileNet1_0.csv')
+    input = torch.randn(1, 3, 224, 224)
+    output = show_summary(ShuffleNetV2)
+    output.to_csv('../models_csv/ShuffleNetV2.csv')
+    # model_graph = make_dot(MobileNetV3(input))
+    # model_graph.view()
