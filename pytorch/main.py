@@ -166,13 +166,13 @@ for epoch in range(max_epoch):
         for i, data in enumerate(valid_loader):
 
             # 获取图片和标签
-            images, lables = data
+            inputs, lables = data
             if (cuda_gpu):
                 inputs, lables = Variable(inputs.cuda()), Variable(lables.cuda())
             else:
                 inputs, lables = Variable(inputs), Variable(lables)
             # forward
-            outputs = net(images)
+            outputs = net(inputs)
             # outputs.detach_()
             outputs.detach()
 
