@@ -71,7 +71,7 @@ normMean = [0.20715627, 0.20715627, 0.20715627]
 normStd = [0.19816825, 0.19816825, 0.19816825]
 normTransform = transforms.Normalize(normMean, normStd)
 trainTrainsform = transforms.Compose([
-    transforms.Resize(224),
+    transforms.Resize((224, 224)),
     transforms.RandomCrop(224, padding=4),
     transforms.ToTensor(), normTransform
 ])
