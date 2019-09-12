@@ -5,7 +5,8 @@ import torch.nn as nn
 import torchvision
 import torchvision.models
 from torch.autograd import Variable
-from graphviz import Digraph
+# from graphviz import Digraph
+from efficientnet_pytorch import EfficientNet
 
 
 def test(model):
@@ -564,64 +565,64 @@ def modelsize(model, input, type_size=4):
         model._get_name(), total_nums * type_size * 2 / 1000 / 1000))
 
 
-def make_dot(var, params=None):
-    """
-    画出 PyTorch 自动梯度图 autograd graph 的 Graphviz 表示.
-    蓝色节点表示有梯度计算的变量Variables;
-    橙色节点表示用于 torch.autograd.Function 中的 backward 的张量 Tensors.
+# def make_dot(var, params=None):
+#     """
+#     画出 PyTorch 自动梯度图 autograd graph 的 Graphviz 表示.
+#     蓝色节点表示有梯度计算的变量Variables;
+#     橙色节点表示用于 torch.autograd.Function 中的 backward 的张量 Tensors.
 
-    Args:
-        var: output Variable
-        params: dict of (name, Variable) to add names to node that
-            require grad (TODO: make optional)
-    """
-    if params is not None:
-        assert all(isinstance(p, Variable) for p in params.values())
-        param_map = {id(v): k for k, v in params.items()}
+#     Args:
+#         var: output Variable
+#         params: dict of (name, Variable) to add names to node that
+#             require grad (TODO: make optional)
+#     """
+#     if params is not None:
+#         assert all(isinstance(p, Variable) for p in params.values())
+#         param_map = {id(v): k for k, v in params.items()}
 
-    node_attr = dict(style='filled', shape='box', align='left',
-                     fontsize='12', ranksep='0.1', height='0.2')
-    dot = Digraph(node_attr=node_attr, graph_attr=dict(size="12,12"))
-    seen = set()
+#     node_attr = dict(style='filled', shape='box', align='left',
+#                      fontsize='12', ranksep='0.1', height='0.2')
+#     dot = Digraph(node_attr=node_attr, graph_attr=dict(size="12,12"))
+#     seen = set()
 
-    def size_to_str(size):
-        return '(' + (', ').join(['%d' % v for v in size]) + ')'
+#     def size_to_str(size):
+#         return '(' + (', ').join(['%d' % v for v in size]) + ')'
 
-    output_nodes = (var.grad_fn,) if not isinstance(var, tuple) else tuple(v.grad_fn for v in var)
+#     output_nodes = (var.grad_fn,) if not isinstance(var, tuple) else tuple(v.grad_fn for v in var)
 
-    def add_nodes(var):
-        if var not in seen:
-            if torch.is_tensor(var):
-                # note: this used to show .saved_tensors in pytorch0.2, but stopped
-                # working as it was moved to ATen and Variable-Tensor merged
-                dot.node(str(id(var)), size_to_str(var.size()), fillcolor='orange')
-            elif hasattr(var, 'variable'):
-                u = var.variable
-                name = param_map[id(u)] if params is not None else ''
-                node_name = '%s\n %s' % (name, size_to_str(u.size()))
-                dot.node(str(id(var)), node_name, fillcolor='lightblue')
-            elif var in output_nodes:
-                dot.node(str(id(var)), str(type(var).__name__), fillcolor='darkolivegreen1')
-            else:
-                dot.node(str(id(var)), str(type(var).__name__))
-            seen.add(var)
-            if hasattr(var, 'next_functions'):
-                for u in var.next_functions:
-                    if u[0] is not None:
-                        dot.edge(str(id(u[0])), str(id(var)))
-                        add_nodes(u[0])
-            if hasattr(var, 'saved_tensors'):
-                for t in var.saved_tensors:
-                    dot.edge(str(id(t)), str(id(var)))
-                    add_nodes(t)
+#     def add_nodes(var):
+#         if var not in seen:
+#             if torch.is_tensor(var):
+#                 # note: this used to show .saved_tensors in pytorch0.2, but stopped
+#                 # working as it was moved to ATen and Variable-Tensor merged
+#                 dot.node(str(id(var)), size_to_str(var.size()), fillcolor='orange')
+#             elif hasattr(var, 'variable'):
+#                 u = var.variable
+#                 name = param_map[id(u)] if params is not None else ''
+#                 node_name = '%s\n %s' % (name, size_to_str(u.size()))
+#                 dot.node(str(id(var)), node_name, fillcolor='lightblue')
+#             elif var in output_nodes:
+#                 dot.node(str(id(var)), str(type(var).__name__), fillcolor='darkolivegreen1')
+#             else:
+#                 dot.node(str(id(var)), str(type(var).__name__))
+#             seen.add(var)
+#             if hasattr(var, 'next_functions'):
+#                 for u in var.next_functions:
+#                     if u[0] is not None:
+#                         dot.edge(str(id(u[0])), str(id(var)))
+#                         add_nodes(u[0])
+#             if hasattr(var, 'saved_tensors'):
+#                 for t in var.saved_tensors:
+#                     dot.edge(str(id(t)), str(id(var)))
+#                     add_nodes(t)
 
-    # 多输出场景 multiple outputs
-    if isinstance(var, tuple):
-        for v in var:
-            add_nodes(v.grad_fn)
-    else:
-        add_nodes(var.grad_fn)
-    return dot
+#     # 多输出场景 multiple outputs
+#     if isinstance(var, tuple):
+#         for v in var:
+#             add_nodes(v.grad_fn)
+#     else:
+#         add_nodes(var.grad_fn)
+#     return dot
 
 
 if __name__ == '__main__':
@@ -637,16 +638,18 @@ if __name__ == '__main__':
     MobileNetV3 = MobileNetV3(num_classes=4)
     MobileNet1_0 = M.MobileNet1_0(num_classes=4)
     ShuffleNetV2 = ShuffleNetV2(num_classes=4)
+    efficinetnet = EfficientNet.from_name(
+    'efficientnet-b0', override_params={'num_classes': 4})
     # 模型参数总量
     # print_model_parm_nums(MobileNet)
-    # print_model_parm_nums(vgg16_bn)
+    print_model_parm_nums(efficinetnet)
     # 模型在具体的输入下的尺寸信息summary以及参数量：show_summary
     # show_summary(MobileNet)
     # show_summary(vgg16_bn)
     # 计算量
 
-    input = torch.randn(1, 3, 224, 224)
-    output = show_summary(resnet18)
-    output.to_csv('../models_csv/ResNet18.csv')
+    # input = torch.randn(1, 3, 224, 224)
+    # output = show_summary(resnet18)
+    # output.to_csv('../models_csv/ResNet18.csv')
     # model_graph = make_dot(MobileNetV3(input))
     # model_graph.view()

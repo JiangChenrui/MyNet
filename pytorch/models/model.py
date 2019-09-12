@@ -2,7 +2,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 
-SqueeNet = models.SqueezeNet(version=1.1, num_classes=4)
 inception = models.inception_v3(num_classes=4)
 """
 模型定义
