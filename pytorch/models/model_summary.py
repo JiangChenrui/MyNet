@@ -626,12 +626,13 @@ def make_dot(var, params=None):
 
 if __name__ == '__main__':
     import model as M
+    import torchvision.models as models
     from MobileNetV3 import MobileNetV3
     from ShuffleNet_V2 import ShuffleNetV2
     MobileNet = M.MobileNet(num_classes=4)
-    vgg16_bn = M.vgg16_bn(num_classes=4)
+    vgg16_bn = models.vgg16_bn(num_classes=4)
+    resnet18 = models.resnet18(num_classes=4)
     # squeezenet = models.squeezenet1_1(pretrained=True)
-    resnet = torchvision.models.resnet50(num_classes=4)
     MobileNetV2 = M.MobileNetV2(num_classes=4)
     MobileNetV3 = MobileNetV3(num_classes=4)
     MobileNet1_0 = M.MobileNet1_0(num_classes=4)
@@ -645,7 +646,7 @@ if __name__ == '__main__':
     # 计算量
 
     input = torch.randn(1, 3, 224, 224)
-    output = show_summary(ShuffleNetV2)
-    output.to_csv('../models_csv/ShuffleNetV2.csv')
+    output = show_summary(resnet18)
+    output.to_csv('../models_csv/ResNet18.csv')
     # model_graph = make_dot(MobileNetV3(input))
     # model_graph.view()

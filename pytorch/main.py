@@ -14,7 +14,7 @@ from torchvision import transforms
 
 # from compute_mean import compute_mean_std
 from load_data import MyDataset
-from models.model import MobileNet, vgg16, vgg16_bn, weight_init, MobileNetV2, MobileNet1_0
+from models.model import MobileNet, weight_init, MobileNetV2, MobileNet1_0
 from utils.utils import show_confMat, validate
 from MobileNetV3 import MobileNetV3
 
@@ -29,9 +29,8 @@ lr_init = 1e-4
 max_epoch = 60
 
 # model
+vgg16_bn = models.vgg16_bn(num_calsses=4)
 MobileNet = MobileNet(num_classes=4)
-vgg16_bn = vgg16_bn(num_classes=4)
-vgg16 = vgg16(num_classes=4)
 # SqueezeNet = models.SqueezeNet(version=1.1, num_classes=4)
 iception = models.inception_v3(num_classes=4)
 MobileNetV2 = MobileNetV2(num_classes=4)
