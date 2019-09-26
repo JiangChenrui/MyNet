@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import os
 from torch.utils.data import Dataset
 from PIL import Image
 
@@ -12,7 +13,7 @@ class MyDataset(Dataset):
         for line in fh:
             # line = line.restrip()
             words = line.split()
-            imgs.append((words[0], int(words[1])))
+            imgs.append((os.path.join('/home/jiangchenrui/MyNet', words[0]), int(words[1])))
             self.imgs = imgs
             self.transform = transform
             self.target_transform = target_transform
@@ -86,8 +87,13 @@ def load_path(img_path):
         for i in range(0, len(path_data)):
             # 将字符串格式转换为正常格式
             path_data[i] = path_data[i].split()
-            _path.append(path_data[i][0])
+            _path.append(os.path.join('/home/jiangchenrui/MyNet', path_data[i][0]))
             lables.append(int(path_data[i][1]))
     x = np.array(_path)
     y = np.array(lables)
     return x, y
+
+
+if __name__ == "__main__":
+    txt_dir = "../data/train_old"
+    x, y = load_path(txt_dir)

@@ -1,6 +1,8 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
+from models.basic_layers import AttentionModule_stage1, AttentionModule_stage2, AttentionModule_stage3
 
 inception = models.inception_v3(num_classes=4)
 """
@@ -10,8 +12,8 @@ inception = models.inception_v3(num_classes=4)
 
 def conv_bn(inp, oup, stride):
     return nn.Sequential(
-        nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
-        nn.BatchNorm2d(oup), nn.ReLU6(inplace=True))
+        nn.Conv2d(inp, oup, 3, stride, 1, bias=False), nn.BatchNorm2d(oup),
+        nn.ReLU6(inplace=True))
 
 
 def conv_dw(inp, oup, stride):
@@ -128,8 +130,7 @@ def weight_init(model):
 
 def conv_1x1_bn(inp, oup):
     return nn.Sequential(
-        nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
-        nn.BatchNorm2d(oup),
+        nn.Conv2d(inp, oup, 1, 1, 0, bias=False), nn.BatchNorm2d(oup),
         nn.ReLU6(inplace=True))
 
 
@@ -261,7 +262,8 @@ class DwresNet(nn.Module):
         self.res3_1 = conv_dw(256, 256, 1)
 
         self.pool = nn.AvgPool2d(7)
-        self.fc = nn.Linear(512, num_classes)
+        self.fc = nn.Sequential(
+            nn.Dropout(Dropout), nn.Linear(512, num_classes))
 
     def forward(self, x):
         x = self.conv1(x)
@@ -291,10 +293,159 @@ class DwresNet(nn.Module):
         return result
 
 
+# 带有深度可分离卷积的残差结构
+class DwresNet1_0(nn.Module):
+
+    def __init__(self, num_classes=1000, input_size=224, Dropout=0.2):
+        super(DwresNet1_0, self).__init__()
+
+        self.conv1 = conv_bn(3, 32, 2)
+        self.conv2 = conv_dw(32, 64, 2)
+
+        self.res1_0 = conv_dw(64, 64, 2)
+        self.res1_1 = conv_dw(64, 64, 1)
+
+        self.res2_0 = conv_dw(128, 128, 2)
+        self.res2_1 = conv_dw(128, 128, 1)
+
+        self.res3_0 = conv_dw(256, 256, 2)
+        self.res3_1 = conv_dw(256, 256, 1)
+
+        # self.lastconv = conv_dw(512, 512, 1)
+        self.pool = nn.AvgPool2d(7)
+        self.fc = nn.Sequential(
+            nn.Dropout(Dropout), nn.Linear(512, num_classes))
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        # print(x.shape)
+
+        x_res1_1 = F.interpolate(
+            x, size=[28, 28], mode='bilinear', align_corners=False)
+        x_res1_0 = self.res1_0(x)
+        x_res1_0 = self.res1_1(x_res1_0)
+        # 拼接特征图
+        x_res1 = torch.cat((x_res1_0, x_res1_1), 1)
+
+        x_res2_1 = F.interpolate(
+            x_res1, size=[14, 14], mode='bilinear', align_corners=False)
+        x_res2_0 = self.res2_0(x_res1)
+        x_res2_0 = self.res2_1(x_res2_0)
+        x_res2 = torch.cat((x_res2_0, x_res2_1), 1)
+
+        x_res3_1 = F.interpolate(
+            x_res2, size=[7, 7], mode='bilinear', align_corners=False)
+        x_res3_0 = self.res3_0(x_res2)
+        x_res3_0 = self.res3_1(x_res3_0)
+        x_res3 = torch.cat((x_res3_0, x_res3_1), 1)
+
+        # x_res3 = self.lastconv(x_res3)
+        x_pool = self.pool(x_res3)
+        x_pool = x_pool.view(-1, 512)
+        result = self.fc(x_pool)
+
+        return result
+
+
+class DwresNet1_1(nn.Module):
+
+    def __init__(self, num_classes=1000, input_size=224, Dropout=0.2):
+        super(DwresNet1_1, self).__init__()
+
+        self.conv1 = conv_bn(3, 64, 2)
+        self.conv2 = nn.MaxPool2d(2, 2)
+
+        self.res1_0 = conv_dw(64, 64, 2)
+        self.res1_1 = conv_dw(64, 64, 1)
+
+        self.res2_0 = conv_dw(128, 128, 2)
+        self.res2_1 = conv_dw(128, 128, 1)
+
+        self.res3_0 = conv_dw(256, 256, 2)
+        self.res3_1 = conv_dw(256, 256, 1)
+
+        # self.lastconv = conv_dw(512, 512, 1)
+        self.pool = nn.AvgPool2d(7)
+        self.fc = nn.Sequential(
+            nn.Dropout(Dropout), nn.Linear(512, num_classes))
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        # print(x.shape)
+
+        x_res1_1 = F.interpolate(
+            x, size=[28, 28], mode='bilinear', align_corners=False)
+        x_res1_0 = self.res1_0(x)
+        x_res1_0 = self.res1_1(x_res1_0)
+        # 拼接特征图
+        x_res1 = torch.cat((x_res1_0, x_res1_1), 1)
+
+        x_res2_1 = F.interpolate(
+            x_res1, size=[14, 14], mode='bilinear', align_corners=False)
+        x_res2_0 = self.res2_0(x_res1)
+        x_res2_0 = self.res2_1(x_res2_0)
+        x_res2 = torch.cat((x_res2_0, x_res2_1), 1)
+
+        x_res3_1 = F.interpolate(
+            x_res2, size=[7, 7], mode='bilinear', align_corners=False)
+        x_res3_0 = self.res3_0(x_res2)
+        x_res3_0 = self.res3_1(x_res3_0)
+        x_res3 = torch.cat((x_res3_0, x_res3_1), 1)
+
+        x_pool = self.pool(x_res3)
+        x_pool = x_pool.view(-1, 512)
+        result = self.fc(x_pool)
+
+        return result
+
+
+class DwAttentionNet(nn.Module):
+
+    def __init__(self, num_classes=1000, input_size=224, Dropout=0.2):
+        super(DwAttentionNet, self).__init__()
+
+        self.conv1 = conv_bn(3, 64, 2)
+        self.conv2 = conv_dw(64, 128, 2)
+
+        self.AttentionStage1 = AttentionModule_stage1(128, 128)
+        self.conv3 = conv_dw(128, 256, 2)
+        self.AttentionStage2 = AttentionModule_stage2(256, 256)
+        self.conv4 = conv_dw(256, 512, 2)
+        self.AttentionStage3 = AttentionModule_stage3(512, 512)
+        self.conv5 = conv_dw(512, 512, 2)
+
+        self.pool = nn.AvgPool2d(7)
+
+        self.fc = nn.Sequential(
+            nn.Dropout(Dropout),
+            nn.Linear(512, num_classes)
+        )
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+
+        x = self.AttentionStage1(x)
+        x = self.conv3(x)
+        x = self.AttentionStage2(x)
+        x = self.conv4(x)
+        x = self.AttentionStage3(x)
+        x = self.conv5(x)
+
+        x = self.pool(x)
+        x = x.view(-1, 512)
+        x = self.fc(x)
+
+        return x
+
+
 if __name__ == "__main__":
-    import torch
     input = torch.randn(1, 3, 224, 224)
     resnet = models.resnet18(pretrained=False)
-    model = DwresNet(num_classes=4)
+    DwresNet1_0 = DwresNet1_0(num_classes=4)
+    DwAttentionNet = DwAttentionNet(num_classes=4)
+    model = DwresNet1_0
     output = model(input)
     print(output.shape)

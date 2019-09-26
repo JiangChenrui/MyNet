@@ -1,6 +1,8 @@
-*/Result/
+*Result
+*data
 *.idea
 /.ipynb_checkpoints/
 *__pycache__
 *.jpg
 .vscode
+*.pyc

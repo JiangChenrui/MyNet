@@ -118,6 +118,9 @@ def validate(net, data_loader, set_name, classes_name):
 
 
 def show_confMat(confusion_mat, classes, set_name, out_dir):
+    """
+    绘制混淆矩阵
+    """
 
     # 归一化
     confusion_mat_N = confusion_mat.copy()

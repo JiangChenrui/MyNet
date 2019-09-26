@@ -143,7 +143,7 @@ class MobileNetV3(nn.Module):
         super(MobileNetV3, self).__init__()
         self.activation_HS = nn.ReLU6(inplace=True)
         self.num_classes = num_classes
-        print("num classes: ", self.num_classes)
+        # print("num classes: ", self.num_classes)
 
         if model_mode == "LARGE":
             layers = [
@@ -262,4 +262,3 @@ class MobileNetV3(nn.Module):
 
 if __name__ == "__main__":
     model = MobileNetV3(num_classes=4)
-    

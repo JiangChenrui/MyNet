@@ -630,26 +630,32 @@ if __name__ == '__main__':
     import torchvision.models as models
     from MobileNetV3 import MobileNetV3
     from ShuffleNet_V2 import ShuffleNetV2
+    from residual_attention_network import ResidualAttentionModel_56
+    from InceptionV4 import InceptionV4
+    # from residual_attention_network import ResidualAttentionModel_56
     MobileNet = M.MobileNet(num_classes=4)
     vgg16_bn = models.vgg16_bn(num_classes=4)
-    resnet18 = models.resnet18(num_classes=4)
+    resnet50 = models.resnet50(num_classes=4)
     # squeezenet = models.squeezenet1_1(pretrained=True)
     MobileNetV2 = M.MobileNetV2(num_classes=4)
     MobileNetV3 = MobileNetV3(num_classes=4)
     MobileNet1_0 = M.MobileNet1_0(num_classes=4)
     ShuffleNetV2 = ShuffleNetV2(num_classes=4)
-    efficinetnet = EfficientNet.from_name(
-    'efficientnet-b0', override_params={'num_classes': 4})
+    efficientnet = EfficientNet.from_name(
+        'efficientnet-b0', override_params={'num_classes': 4})
+    ResidualAttentionModel_56 = ResidualAttentionModel_56(num_classes=4)
+    inceptionV4 = InceptionV4(num_classes=4)
+    DwresNet = M.DwresNet(num_classes=4)
+    DwresNet1_0 = M.DwresNet1_0(num_classes=4)
+    DwAttentionNet = M.DwAttentionNet(num_classes=4)
+    model = inceptionV4
     # 模型参数总量
-    # print_model_parm_nums(MobileNet)
-    print_model_parm_nums(efficinetnet)
+    print_model_parm_nums(model)
+    # 模型FLOPs
+    print_model_parm_flops(model)
     # 模型在具体的输入下的尺寸信息summary以及参数量：show_summary
-    # show_summary(MobileNet)
-    # show_summary(vgg16_bn)
-    # 计算量
 
+    # 计算量
     # input = torch.randn(1, 3, 224, 224)
-    # output = show_summary(resnet18)
-    # output.to_csv('../models_csv/ResNet18.csv')
-    # model_graph = make_dot(MobileNetV3(input))
-    # model_graph.view()
+    # output = show_summary(model)
+    # output.to_csv('../models_csv/EfficientNet.csv')

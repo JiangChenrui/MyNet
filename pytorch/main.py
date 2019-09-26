@@ -6,17 +6,20 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torchvision.models as models
+import torchvision.models as torch_models
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-# from compute_mean import compute_mean_std
+import models.model as M
 from load_data import MyDataset
-from models.model import MobileNet, weight_init, MobileNetV2, MobileNet1_0
 from utils.utils import show_confMat, validate
-from MobileNetV3 import MobileNetV3
+from models.MobileNetV3 import MobileNetV3
+from models.ShuffleNet_V2 import ShuffleNetV2
+from models.InceptionV4 import InceptionV4
+# from models.residual_attention_network import ResidualAttentionModel_56
+from efficientnet_pytorch import EfficientNet
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '1'  # 使用哪几个GPU进行训练
 
@@ -25,29 +28,37 @@ sys.path.append("..")
 cuda_gpu = torch.cuda.is_available()
 
 batch_size = 64
-lr_init = 1e-4
+lr_init = 1e-2
 max_epoch = 60
 
 # model
-vgg16_bn = models.vgg16_bn(num_calsses=4)
-MobileNet = MobileNet(num_classes=4)
+# vgg16_bn = torch_models.vgg16_bn(num_calsses=4)
+MobileNet = M.MobileNet(num_classes=4)
 # SqueezeNet = models.SqueezeNet(version=1.1, num_classes=4)
-iception = models.inception_v3(num_classes=4)
-MobileNetV2 = MobileNetV2(num_classes=4)
+inception = InceptionV4(num_classes=4)
+MobileNetV2 = M.MobileNetV2(num_classes=4)
 MobileNetV3 = MobileNetV3(num_classes=4)
-resnet50 = models.resnet50(num_classes=4)
-MobileNet1_0 = MobileNet1_0(num_classes=4)
-net = MobileNet1_0
+resnet50 = torch_models.resnet50(num_classes=4)
+MobileNet1_0 = M.MobileNet1_0(num_classes=4)
+ShuffleNetV2 = ShuffleNetV2(num_classes=4)
+DwresNet = M.DwresNet(num_classes=4)
+DwresNet1_0 = M.DwresNet1_0(num_classes=4)
+DwresNet1_1 = M.DwresNet1_1(num_classes=4)
+# ResAttetion = ResidualAttentionModel_56(num_classes=4)
+DwAttentionNet = M.DwAttentionNet(num_classes=4)
+EfficientNet = EfficientNet.from_name('efficientnet-b0', override_params={'num_classes': 4})
+net = DwresNet1_0
 print(net)
 
 # 权重初始化
-weight_init(net)
+M.weight_init(net)
 # net._initialize_weights()
 if (cuda_gpu):
     net = torch.nn.DataParallel(net).cuda()  # 将模型转为cuda类型
+    # net = net.cuda()
 
-train_dir = 'data/train_old'
-val_dir = 'data/test_old'
+train_dir = '../data/train_old'
+val_dir = '../data/test_old'
 
 # log
 result_dir = 'Result/'
@@ -55,7 +66,7 @@ result_dir = 'Result/'
 now_time = datetime.now()
 time_str = datetime.strftime(now_time, '%m-%d_%H-%M-%S')
 
-log_dir = os.path.join(result_dir, 'MobileNet1_1', time_str)
+log_dir = os.path.join(result_dir, 'DwresNet1-0', time_str)
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
@@ -70,8 +81,10 @@ normMean = [0.20715627, 0.20715627, 0.20715627]
 normStd = [0.19816825, 0.19816825, 0.19816825]
 normTransform = transforms.Normalize(normMean, normStd)
 trainTrainsform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.RandomCrop(224, padding=4),
+    transforms.Resize((232, 232)),
+    transforms.RandomCrop(224),
+    transforms.RandomHorizontalFlip(0.5),
+    transforms.ColorJitter(0.5, 0.5, 0.5),
     transforms.ToTensor(), normTransform
 ])
 
@@ -88,14 +101,14 @@ valid_data = MyDataset(txt_path=val_dir, transform=valiTransform)
 # 构建Dataloder
 train_loader = DataLoader(
     dataset=train_data, batch_size=batch_size, shuffle=True)
-valid_loader = DataLoader(dataset=valid_data, batch_size=batch_size)
+valid_loader = DataLoader(dataset=valid_data, batch_size=1)
 
 # 定义损失函数和优化器
 criterion = nn.CrossEntropyLoss().cuda()  # 选择损失函数
 optimizer = optim.SGD(
     net.parameters(), lr=lr_init, momentum=0.9, dampening=0.1)  # 选择优化器
 scheduler = torch.optim.lr_scheduler.StepLR(
-    optimizer, step_size=50, gamma=0.1)  # 设置学习率下降策略
+    optimizer, step_size=1, gamma=0.95)  # 设置学习率下降策略
 
 # 训练
 best_model = 0
@@ -106,6 +119,8 @@ for epoch in range(max_epoch):
     correct = 0.0
     total = 0.0
     scheduler.step()  # 更新学习率
+    print(scheduler.get_lr()[0])
+    net.train()
 
     for i, data in enumerate(train_loader):
         # 获取图片和标签
@@ -134,8 +149,8 @@ for epoch in range(max_epoch):
         loss_sigma += loss.item()
 
         # 每10个iteration打印一次训练信息， loss为10个iteration的平均
-        if i % 10 == 9:
-            loss_avg = loss_sigma / 10
+        if i % 100 == 99:
+            loss_avg = loss_sigma / 100
             loss_sigma = 0.0
             print(
                 "Training: Epoch[{:0>3}/{:0>3}] Iteration[{:0>3}/{:0>3}] Loss:{:.4f} Acc:{:.2%}"
@@ -187,11 +202,10 @@ for epoch in range(max_epoch):
                 cate_i = lables[j].cpu().numpy()
                 pre_i = predicted[j].cpu().numpy()
                 conf_mat[cate_i, pre_i] += 1.0
-            Accuracy = conf_mat.trace() / conf_mat.sum()
 
+        Accuracy = conf_mat.trace() / conf_mat.sum()
         print('{} set Accuracy:{:.2%}'.format('Valid',
-                                              conf_mat.trace() /
-                                              conf_mat.sum()))
+                                              conf_mat.trace() / conf_mat.sum()))
         # 记录Loss, accuracy
         writer.add_scalars('Loss_group',
                            {'valid_loss': loss_sigma / len(valid_loader)},
@@ -201,8 +215,10 @@ for epoch in range(max_epoch):
                            epoch)
 
         if Accuracy >= best_model:
+            best_model = Accuracy
             net_save_path = os.path.join(log_dir, 'best_model_params.pth')
             torch.save(net.state_dict(), net_save_path)
+            print("Save model success")
 
 
 print('Finished Training')
