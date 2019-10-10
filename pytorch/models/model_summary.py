@@ -630,7 +630,7 @@ if __name__ == '__main__':
     import torchvision.models as models
     from MobileNetV3 import MobileNetV3
     from ShuffleNet_V2 import ShuffleNetV2
-    from residual_attention_network import ResidualAttentionModel_56
+    # from residual_attention_network import ResidualAttentionModel_56
     from InceptionV4 import InceptionV4
     # from residual_attention_network import ResidualAttentionModel_56
     MobileNet = M.MobileNet(num_classes=4)
@@ -643,12 +643,15 @@ if __name__ == '__main__':
     ShuffleNetV2 = ShuffleNetV2(num_classes=4)
     efficientnet = EfficientNet.from_name(
         'efficientnet-b0', override_params={'num_classes': 4})
-    ResidualAttentionModel_56 = ResidualAttentionModel_56(num_classes=4)
+    # ResidualAttentionModel_56 = ResidualAttentionModel_56(num_classes=4)
     inceptionV4 = InceptionV4(num_classes=4)
     DwresNet = M.DwresNet(num_classes=4)
     DwresNet1_0 = M.DwresNet1_0(num_classes=4)
     DwAttentionNet = M.DwAttentionNet(num_classes=4)
-    model = inceptionV4
+    DwAttentionNet2_1 = M.DwAttentionNetV2_1(num_classes=4)
+    DwAttentionNet2_2 = M.DwAttentionNetV2_2(num_classes=4)
+    DwAttentionNet2_3 = M.DwAttentionNetV2_3(num_classes=4)
+    model = DwAttentionNet2_3
     # 模型参数总量
     print_model_parm_nums(model)
     # 模型FLOPs
@@ -658,4 +661,4 @@ if __name__ == '__main__':
     # 计算量
     # input = torch.randn(1, 3, 224, 224)
     # output = show_summary(model)
-    # output.to_csv('../models_csv/EfficientNet.csv')
+    # output.to_csv('../models_csv/resnet50.csv')

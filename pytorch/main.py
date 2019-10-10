@@ -21,7 +21,7 @@ from models.InceptionV4 import InceptionV4
 # from models.residual_attention_network import ResidualAttentionModel_56
 from efficientnet_pytorch import EfficientNet
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'  # 使用哪几个GPU进行训练
+os.environ["CUDA_VISIBLE_DEVICES"] = '4'  # 使用哪几个GPU进行训练
 
 
 sys.path.append("..")
@@ -32,7 +32,7 @@ lr_init = 1e-2
 max_epoch = 60
 
 # model
-# vgg16_bn = torch_models.vgg16_bn(num_calsses=4)
+vgg16_bn = torch_models.vgg16_bn(pretrained=False, num_classes=4)
 MobileNet = M.MobileNet(num_classes=4)
 # SqueezeNet = models.SqueezeNet(version=1.1, num_classes=4)
 inception = InceptionV4(num_classes=4)
@@ -46,8 +46,12 @@ DwresNet1_0 = M.DwresNet1_0(num_classes=4)
 DwresNet1_1 = M.DwresNet1_1(num_classes=4)
 # ResAttetion = ResidualAttentionModel_56(num_classes=4)
 DwAttentionNet = M.DwAttentionNet(num_classes=4)
+DwAttentionNetV2 = M.DwAttentionNetV2(num_classes=4)
+DwAttentionNetV2_1 = M.DwAttentionNetV2_1(num_classes=4)
+DwAttentionNetV2_2 = M.DwAttentionNetV2_2(num_classes=4)
+DwAttentionNetV2_3 = M.DwAttentionNetV2_3(num_classes=4)
 EfficientNet = EfficientNet.from_name('efficientnet-b0', override_params={'num_classes': 4})
-net = DwresNet1_0
+net = DwresNet
 print(net)
 
 # 权重初始化
@@ -66,7 +70,7 @@ result_dir = 'Result/'
 now_time = datetime.now()
 time_str = datetime.strftime(now_time, '%m-%d_%H-%M-%S')
 
-log_dir = os.path.join(result_dir, 'DwresNet1-0', time_str)
+log_dir = os.path.join(result_dir, 'test', time_str)
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 

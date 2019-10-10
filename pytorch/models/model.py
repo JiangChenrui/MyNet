@@ -2,9 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
-from models.basic_layers import AttentionModule_stage1, AttentionModule_stage2, AttentionModule_stage3
+import basic_layers as basic
 
-inception = models.inception_v3(num_classes=4)
 """
 模型定义
 """
@@ -16,7 +15,7 @@ def conv_bn(inp, oup, stride):
         nn.ReLU6(inplace=True))
 
 
-def conv_dw(inp, oup, stride):
+def conv_dw(inp, oup, stride=1):
     return nn.Sequential(
         nn.Conv2d(inp, inp, 3, stride, 1, groups=inp, bias=False),
         nn.BatchNorm2d(inp),
@@ -40,11 +39,11 @@ class MobileNet(nn.Module):
             conv_dw(128, 256, 2),
             conv_dw(256, 256, 1),
             conv_dw(256, 512, 2),
-            # conv_dw(512, 512, 1),
-            # conv_dw(512, 512, 1),
-            # conv_dw(512, 512, 1),
-            # conv_dw(512, 512, 1),
-            # conv_dw(512, 512, 1),
+            conv_dw(512, 512, 1),
+            conv_dw(512, 512, 1),
+            conv_dw(512, 512, 1),
+            conv_dw(512, 512, 1),
+            conv_dw(512, 512, 1),
             conv_dw(512, 1024, 2),
             conv_dw(1024, 1024, 1),
             nn.AvgPool2d(7),
@@ -108,16 +107,15 @@ def weight_init(model):
     """
     for m in model.modules():
         if isinstance(m, nn.Conv2d):
-            if isinstance(m, nn.Conv2d):
-                nn.init.xavier_uniform_(m.weight)
-                if m.bias is not None:
-                    m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
+            nn.init.xavier_uniform_(m.weight)
+            if m.bias is not None:
                 m.bias.data.zero_()
-            elif isinstance(m, nn.Linear):
-                m.weight.data.normal_(0, 0.01)
-                m.bias.data.zero_()
+        elif isinstance(m, nn.BatchNorm2d):
+            m.weight.data.fill_(1)
+            m.bias.data.zero_()
+        elif isinstance(m, nn.Linear):
+            m.weight.data.normal_(0, 0.01)
+            m.bias.data.zero_()
     print("Weight has init")
 
 
@@ -168,14 +166,7 @@ class InvertedResidual(nn.Module):
                 nn.BatchNorm2d(hidden_dim),
                 nn.ReLU6(inplace=True),
                 # dw
-                nn.Conv2d(
-                    hidden_dim,
-                    hidden_dim,
-                    3,
-                    stride,
-                    1,
-                    groups=hidden_dim,
-                    bias=False),
+                nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False),
                 nn.BatchNorm2d(hidden_dim),
                 nn.ReLU6(inplace=True),
                 # pw-linear
@@ -246,7 +237,7 @@ class MobileNetV2(nn.Module):
 # 带有深度可分离卷积的残差网络
 class DwresNet(nn.Module):
 
-    def __init__(self, num_classes=1000, input_size=224, Dropout=0.2):
+    def __init__(self, num_classes=1000, input_size=224, Dropout=0.5):
         super(DwresNet, self).__init__()
 
         self.conv1 = conv_bn(3, 32, 2)
@@ -262,8 +253,9 @@ class DwresNet(nn.Module):
         self.res3_1 = conv_dw(256, 256, 1)
 
         self.pool = nn.AvgPool2d(7)
-        self.fc = nn.Sequential(
-            nn.Dropout(Dropout), nn.Linear(512, num_classes))
+        # self.fc = nn.Sequential(
+        #     nn.Dropout(Dropout), nn.Linear(512, num_classes))
+        self.fc = nn.Linear(512, num_classes)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -296,7 +288,7 @@ class DwresNet(nn.Module):
 # 带有深度可分离卷积的残差结构
 class DwresNet1_0(nn.Module):
 
-    def __init__(self, num_classes=1000, input_size=224, Dropout=0.2):
+    def __init__(self, num_classes=1000, input_size=224, Dropout=0.5):
         super(DwresNet1_0, self).__init__()
 
         self.conv1 = conv_bn(3, 32, 2)
@@ -350,7 +342,7 @@ class DwresNet1_0(nn.Module):
 
 class DwresNet1_1(nn.Module):
 
-    def __init__(self, num_classes=1000, input_size=224, Dropout=0.2):
+    def __init__(self, num_classes=1000, input_size=224, Dropout=0.5):
         super(DwresNet1_1, self).__init__()
 
         self.conv1 = conv_bn(3, 64, 2)
@@ -403,18 +395,207 @@ class DwresNet1_1(nn.Module):
 
 class DwAttentionNet(nn.Module):
 
-    def __init__(self, num_classes=1000, input_size=224, Dropout=0.2):
+    def __init__(self, num_classes=1000, input_size=224, Dropout=0.5):
         super(DwAttentionNet, self).__init__()
 
         self.conv1 = conv_bn(3, 64, 2)
         self.conv2 = conv_dw(64, 128, 2)
 
-        self.AttentionStage1 = AttentionModule_stage1(128, 128)
+        self.AttentionStage1 = basic.AttentionModule_stage1(128, 128)
         self.conv3 = conv_dw(128, 256, 2)
-        self.AttentionStage2 = AttentionModule_stage2(256, 256)
+        self.AttentionStage2 = basic.AttentionModule_stage2(256, 256)
         self.conv4 = conv_dw(256, 512, 2)
-        self.AttentionStage3 = AttentionModule_stage3(512, 512)
+        self.AttentionStage3 = basic.AttentionModule_stage3(512, 512)
         self.conv5 = conv_dw(512, 512, 2)
+
+        self.pool = nn.AvgPool2d(7)
+
+        self.fc = nn.Sequential(
+            nn.Dropout(Dropout),
+            nn.Linear(512, num_classes)
+        )
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+
+        x = self.AttentionStage1(x)
+        x = self.conv3(x)
+        x = self.AttentionStage2(x)
+        x = self.conv4(x)
+        x = self.AttentionStage3(x)
+        x = self.conv5(x)
+
+        x = self.pool(x)
+        x = x.view(-1, 512)
+        x = self.fc(x)
+
+        return x
+
+
+class DwAttentionNetV2(nn.Module):
+
+    def __init__(self, num_classes=1000, input_size=224, Dropout=0.5):
+        super(DwAttentionNetV2, self).__init__()
+
+        self.conv1 = conv_bn(3, 32, 2)
+        self.conv2 = conv_dw(32, 64, 2)
+
+        self.AttentionStage1 = basic.AttentionModule_stage1(64, 64)
+        self.conv3 = conv_dw(64, 128, 2)
+        self.AttentionStage2 = basic.AttentionModule_stage2(128, 128)
+        self.conv4 = conv_dw(128, 256, 2)
+        self.AttentionStage3 = basic.AttentionModule_stage3(256, 256)
+        self.conv5 = conv_dw(256, 512, 2)
+
+        self.pool = nn.AvgPool2d(7)
+
+        self.fc = nn.Sequential(
+            nn.Dropout(Dropout),
+            nn.Linear(512, num_classes)
+        )
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+
+        x = self.AttentionStage1(x)
+        x = self.conv3(x)
+        x = self.AttentionStage2(x)
+        x = self.conv4(x)
+        x = self.AttentionStage3(x)
+        x = self.conv5(x)
+
+        x = self.pool(x)
+        x = x.view(-1, 512)
+        x = self.fc(x)
+
+        return x
+
+
+class DwAttentionNetV2_1(nn.Module):
+
+    def __init__(self, num_classes=1000, input_size=224, Dropout=0.5):
+        super(DwAttentionNetV2_1, self).__init__()
+
+        self.conv1 = conv_bn(3, 32, 2)
+        self.conv2 = conv_dw(32, 64, 2)
+
+        self.AttentionStage1 = basic.AttentionModule_stage1(64, 64)
+        self.conv3 = conv_dw(64, 128, 2)
+        # self.AttentionStage2 = basic.AttentionModule_stage2(128, 128)
+        self.AttentionStage2 = nn.Sequential(
+            conv_dw(128, 128),
+            conv_dw(128, 128),
+            conv_dw(128, 128)
+        )
+        self.conv4 = conv_dw(128, 256, 2)
+        # self.AttentionStage3 = basic.AttentionModule_stage3(256, 256)
+        self.AttentionStage3 = nn.Sequential(
+            conv_dw(256, 256),
+            conv_dw(256, 256),
+            conv_dw(256, 256)
+        )
+        self.conv5 = conv_dw(256, 512, 2)
+
+        self.pool = nn.AvgPool2d(7)
+
+        self.fc = nn.Sequential(
+            nn.Dropout(Dropout),
+            nn.Linear(512, num_classes)
+        )
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+
+        x = self.AttentionStage1(x)
+        x = self.conv3(x)
+        x = self.AttentionStage2(x)
+        x = self.conv4(x)
+        x = self.AttentionStage3(x)
+        x = self.conv5(x)
+
+        x = self.pool(x)
+        x = x.view(-1, 512)
+        x = self.fc(x)
+
+        return x
+
+
+class DwAttentionNetV2_2(nn.Module):
+
+    def __init__(self, num_classes=1000, input_size=224, Dropout=0.5):
+        super(DwAttentionNetV2_2, self).__init__()
+
+        self.conv1 = conv_bn(3, 32, 2)
+        self.conv2 = conv_dw(32, 64, 2)
+
+        # self.AttentionStage1 = basic.AttentionModule_stage1(64, 64)\
+        self.AttentionStage1 = nn.Sequential(
+            conv_dw(64, 64),
+            conv_dw(64, 64),
+            conv_dw(64, 64)
+        )
+        self.conv3 = conv_dw(64, 128, 2)
+        self.AttentionStage2 = basic.AttentionModule_stage2(128, 128)
+        self.conv4 = conv_dw(128, 256, 2)
+        # self.AttentionStage3 = basic.AttentionModule_stage3(256, 256)
+        self.AttentionStage3 = nn.Sequential(
+            conv_dw(256, 256),
+            conv_dw(256, 256),
+            conv_dw(256, 256)
+        )
+        self.conv5 = conv_dw(256, 512, 2)
+
+        self.pool = nn.AvgPool2d(7)
+
+        self.fc = nn.Sequential(
+            nn.Dropout(Dropout),
+            nn.Linear(512, num_classes)
+        )
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+
+        x = self.AttentionStage1(x)
+        x = self.conv3(x)
+        x = self.AttentionStage2(x)
+        x = self.conv4(x)
+        x = self.AttentionStage3(x)
+        x = self.conv5(x)
+
+        x = self.pool(x)
+        x = x.view(-1, 512)
+        x = self.fc(x)
+
+        return x
+
+
+class DwAttentionNetV2_3(nn.Module):
+
+    def __init__(self, num_classes=1000, input_size=224, Dropout=0.5):
+        super(DwAttentionNetV2_3, self).__init__()
+
+        self.conv1 = conv_bn(3, 32, 2)
+        self.conv2 = conv_dw(32, 64, 2)
+
+        # self.AttentionStage1 = basic.AttentionModule_stage1(64, 64)
+        self.AttentionStage1 = nn.Sequential(
+            conv_dw(64, 64),
+            conv_dw(64, 64),
+            conv_dw(64, 64)
+        )
+        self.conv3 = conv_dw(64, 128, 2)
+        self.AttentionStage2 = nn.Sequential(
+            conv_dw(128, 128),
+            conv_dw(128, 128),
+            conv_dw(128, 128)
+        )
+        self.conv4 = conv_dw(128, 256, 2)
+        self.AttentionStage3 = basic.AttentionModule_stage3(256, 256)
+        self.conv5 = conv_dw(256, 512, 2)
 
         self.pool = nn.AvgPool2d(7)
 
@@ -445,7 +626,6 @@ if __name__ == "__main__":
     input = torch.randn(1, 3, 224, 224)
     resnet = models.resnet18(pretrained=False)
     DwresNet1_0 = DwresNet1_0(num_classes=4)
-    DwAttentionNet = DwAttentionNet(num_classes=4)
-    model = DwresNet1_0
-    output = model(input)
-    print(output.shape)
+    DwAttentionNetV2_2 = DwAttentionNetV2_2(num_classes=4)
+    model = DwAttentionNetV2_2
+    print(model)

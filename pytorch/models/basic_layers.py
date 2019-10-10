@@ -7,6 +7,9 @@ from torch.autograd import Variable
 import numpy as np
 
 
+__all__ = ['AttentionModule_stage1', 'AttentionModule_stage2', 'AttentionModule_stage3']
+
+
 def conv_dw(inp, oup, stride=1):
     return nn.Sequential(
         nn.Conv2d(inp, inp, 3, stride, 1, groups=inp, bias=False),
@@ -261,8 +264,9 @@ class AttentionModule_stage3(nn.Module):
 
 
 if __name__ == '__main__':
-    res_attention1 = AttentionModule_stage1(128, 128)
-    input1 = torch.randn(1, 128, 56, 56)
-    out_stage1 = res_attention1(input)
-    res_attention1 = AttentionModule_stage2(256, 256)
-    input2 = torch.randn(1, 256, 28, 28)
+    res_attention1 = AttentionModule_stage1(64, 64)
+    input1 = torch.randn(1, 64, 56, 56)
+    out_stage1 = res_attention1(input1)
+    print(out_stage1.shape)
+    res_attention1 = AttentionModule_stage2(128, 128)
+    input2 = torch.randn(1, 128, 28, 28)
